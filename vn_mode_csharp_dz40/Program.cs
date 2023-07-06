@@ -4,8 +4,13 @@ using System.Linq;
 
 class Program
 {
+    private const int AddPlayerCommand = 1;
+    private const int BanPlayerCommand = 2;
+    private const int UnbanPlayerCommand = 3;
+    private const int RemovePlayerCommand = 4;
+    private const int ExitCommand = 5;
     private const string Menu = "1. Добавить игрока\n2. Забанить игрока\n3. Разбанить игрока\n4. Удалить игрока\n5. Выход";
-    private const string AddPlayer = "Введите ник и уровень игрока:";
+    private const string AddNewPlayer = "Введите ник и уровень игрока:";
     private const string BanUnbanRemove = "Введите уникальный ID игрока:";
     private const string InvalidOption = "Неверный выбор. Попробуйте снова.";
     private const string InvalidInput = "Некорректный ввод. Попробуйте снова.";
@@ -18,13 +23,16 @@ class Program
     {
         Database database = new Database();
         int uniqueIdCounter = 1;
+        bool isWorking = true;
 
-        while (true)
+        while (isWorking)
         {
             Console.Clear();
             Console.WriteLine(Menu);
 
-            if (!int.TryParse(Console.ReadLine(), out int option))
+            bool isParseSuccessful = int.TryParse(Console.ReadLine(), out int option);
+
+            if (isParseSuccessful == false)
             {
                 Console.WriteLine(InvalidOption);
                 continue;
@@ -32,24 +40,24 @@ class Program
 
             switch (option)
             {
-                case 1:
-                    uniqueIdCounter = AddPlayerMethod(database, uniqueIdCounter);
+                case AddPlayerCommand:
+                    uniqueIdCounter = AddPlayer(database, uniqueIdCounter);
                     Console.WriteLine(PlayerAdded);
                     break;
-                case 2:
-                    BanUnbanRemoveMethod(database, database.BanPlayer);
+                case BanPlayerCommand:
+                    ExecuteAction(database, database.BanPlayer);
                     Console.WriteLine(PlayerBanned);
                     break;
-                case 3:
-                    BanUnbanRemoveMethod(database, database.UnbanPlayer);
+                case UnbanPlayerCommand:
+                    ExecuteAction(database, database.UnbanPlayer);
                     Console.WriteLine(PlayerUnbanned);
                     break;
-                case 4:
-                    BanUnbanRemoveMethod(database, database.RemovePlayer);
+                case RemovePlayerCommand:
+                    ExecuteAction(database, database.RemovePlayer);
                     Console.WriteLine(PlayerRemoved);
                     break;
-                case 5:
-                    Environment.Exit(0);
+                case ExitCommand:
+                    isWorking = false;
                     break;
                 default:
                     Console.WriteLine(InvalidOption);
@@ -58,24 +66,32 @@ class Program
         }
     }
 
-    static int AddPlayerMethod(Database database, int uniqueId)
+    static int AddPlayer(Database database, int uniqueId)
     {
-        Console.WriteLine(AddPlayer);
+        Console.WriteLine(AddNewPlayer);
         string nickname = Console.ReadLine();
-        if (!int.TryParse(Console.ReadLine(), out int level))
+
+        bool isParseSuccessful = int.TryParse(Console.ReadLine(), out int level);
+
+        if (isParseSuccessful == false)
         {
             Console.WriteLine(InvalidInput);
             return uniqueId;
         }
+
         database.AddPlayer(new Player(uniqueId, nickname, level));
         return uniqueId + 1;
     }
 
-    static void BanUnbanRemoveMethod(Database database, Action<int> action)
+    static void ExecuteAction(Database database, Action<int> action)
     {
         database.DisplayPlayers();
+
         Console.WriteLine(BanUnbanRemove);
-        if (!int.TryParse(Console.ReadLine(), out int uniqueId))
+
+        bool isParseSuccessful = int.TryParse(Console.ReadLine(), out int uniqueId);
+
+        if (isParseSuccessful == false)
         {
             Console.WriteLine(InvalidInput);
             return;
@@ -87,29 +103,30 @@ class Program
 
 public class Player
 {
-    public int UniqueId { get; }
-    public string Nickname { get; set; }
-    public int Level { get; set; }
+    private int _uniqueId;
     private bool _isBanned;
 
     public Player(int uniqueId, string nickname, int level)
     {
-        UniqueId = uniqueId;
+        _uniqueId = uniqueId;
         Nickname = nickname;
         Level = level;
         _isBanned = false;
     }
 
-    public bool IsBanned => _isBanned;
+    public int UniqueId => _uniqueId;
+    public string Nickname { get; set; }
+    public int Level { get; set; }
+    public bool IsBanned { get; private set; }
 
     public void Ban()
     {
-        _isBanned = true;
+        IsBanned = true;
     }
 
     public void Unban()
     {
-        _isBanned = false;
+        IsBanned = false;
     }
 }
 
@@ -120,12 +137,6 @@ public class Database
     public Database()
     {
         _players = new List<Player>();
-    }
-
-    private bool TryGetPlayer(int uniqueId, out Player player)
-    {
-        player = _players.FirstOrDefault(playerInList => playerInList.UniqueId == uniqueId);
-        return player != null;
     }
 
     public void AddPlayer(Player player)
@@ -160,9 +171,16 @@ public class Database
     public void DisplayPlayers()
     {
         Console.WriteLine("Список игроков:");
+
         foreach (var player in _players)
         {
             Console.WriteLine($"ID: {player.UniqueId}, Ник: {player.Nickname}, Уровень: {player.Level}");
         }
+    }
+
+    private bool TryGetPlayer(int uniqueId, out Player player)
+    {
+        player = _players.FirstOrDefault(playerInList => playerInList.UniqueId == uniqueId);
+        return player != null;
     }
 }
