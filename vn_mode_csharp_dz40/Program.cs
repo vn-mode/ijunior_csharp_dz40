@@ -9,7 +9,8 @@ class Program
     private const int UnbanPlayerCommand = 3;
     private const int RemovePlayerCommand = 4;
     private const int ExitCommand = 5;
-    private const string Menu = "1. Добавить игрока\n2. Забанить игрока\n3. Разбанить игрока\n4. Удалить игрока\n5. Выход";
+
+    private static readonly string Menu = $"{AddPlayerCommand}. Добавить игрока\n{BanPlayerCommand}. Забанить игрока\n{UnbanPlayerCommand}. Разбанить игрока\n{RemovePlayerCommand}. Удалить игрока\n{ExitCommand}. Выход";
     private const string AddNewPlayer = "Введите ник и уровень игрока:";
     private const string BanUnbanRemove = "Введите уникальный ID игрока:";
     private const string InvalidOption = "Неверный выбор. Попробуйте снова.";
@@ -30,7 +31,7 @@ class Program
             Console.Clear();
             Console.WriteLine(Menu);
 
-            bool isParseSuccessful = int.TryParse(Console.ReadLine(), out int option);
+            bool isParseSuccessful = int.TryParse(Console.ReadLine(), out int command);
 
             if (isParseSuccessful == false)
             {
@@ -38,27 +39,33 @@ class Program
                 continue;
             }
 
-            switch (option)
+            switch (command)
             {
                 case AddPlayerCommand:
-                    uniqueIdCounter = AddPlayer(database, uniqueIdCounter);
+                    database.AddPlayer(AddPlayer(uniqueIdCounter));
                     Console.WriteLine(PlayerAdded);
+                    uniqueIdCounter++;
                     break;
+
                 case BanPlayerCommand:
                     ExecuteAction(database, database.BanPlayer);
                     Console.WriteLine(PlayerBanned);
                     break;
+
                 case UnbanPlayerCommand:
                     ExecuteAction(database, database.UnbanPlayer);
                     Console.WriteLine(PlayerUnbanned);
                     break;
+
                 case RemovePlayerCommand:
                     ExecuteAction(database, database.RemovePlayer);
                     Console.WriteLine(PlayerRemoved);
                     break;
+
                 case ExitCommand:
                     isWorking = false;
                     break;
+
                 default:
                     Console.WriteLine(InvalidOption);
                     break;
@@ -66,7 +73,7 @@ class Program
         }
     }
 
-    static int AddPlayer(Database database, int uniqueId)
+    private static Player AddPlayer(int uniqueId)
     {
         Console.WriteLine(AddNewPlayer);
         string nickname = Console.ReadLine();
@@ -76,14 +83,13 @@ class Program
         if (isParseSuccessful == false)
         {
             Console.WriteLine(InvalidInput);
-            return uniqueId;
+            return null;
         }
 
-        database.AddPlayer(new Player(uniqueId, nickname, level));
-        return uniqueId + 1;
+        return new Player(uniqueId, nickname, level);
     }
 
-    static void ExecuteAction(Database database, Action<int> action)
+    private static void ExecuteAction(Database database, Action<int> action)
     {
         database.DisplayPlayers();
 
@@ -105,28 +111,30 @@ public class Player
 {
     private int _uniqueId;
     private bool _isBanned;
+    private string _nickname;
+    private int _level;
 
     public Player(int uniqueId, string nickname, int level)
     {
         _uniqueId = uniqueId;
-        Nickname = nickname;
-        Level = level;
+        _nickname = nickname;
+        _level = level;
         _isBanned = false;
     }
 
     public int UniqueId => _uniqueId;
-    public string Nickname { get; set; }
-    public int Level { get; set; }
-    public bool IsBanned { get; private set; }
+    public string Nickname => _nickname;
+    public int Level => _level;
+    public bool IsBanned => _isBanned;
 
     public void Ban()
     {
-        IsBanned = true;
+        _isBanned = true;
     }
 
     public void Unban()
     {
-        IsBanned = false;
+        _isBanned = false;
     }
 }
 
@@ -141,7 +149,10 @@ public class Database
 
     public void AddPlayer(Player player)
     {
-        _players.Add(player);
+        if (player != null)
+        {
+            _players.Add(player);
+        }
     }
 
     public void RemovePlayer(int uniqueId)
