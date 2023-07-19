@@ -4,223 +4,195 @@ using System.Linq;
 
 class Program
 {
-    private const int AddPlayerCommand = 1;
-    private const int BanPlayerCommand = 2;
-    private const int UnbanPlayerCommand = 3;
-    private const int RemovePlayerCommand = 4;
-    private const int ExitCommand = 5;
-
-    private const string MenuTitle = "Меню управления игроками:";
-    private const string AddPlayerOption = "1. Добавить игрока";
-    private const string BanPlayerOption = "2. Забанить игрока";
-    private const string UnbanPlayerOption = "3. Разбанить игрока";
-    private const string RemovePlayerOption = "4. Удалить игрока";
-    private const string ExitOption = "5. Выход";
-    private const string PlayerListTitle = "Список игроков:";
-    private const string AddNewPlayerPrompt = "Введите ник и уровень игрока:";
-    private const string PlayerIdPrompt = "Введите уникальный ID игрока:";
-    private const string InvalidOptionMessage = "Неверный выбор. Попробуйте снова.";
-    private const string InvalidInputMessage = "Некорректный ввод. Попробуйте снова.";
-    private const string PlayerAddedMessage = "Игрок успешно добавлен.";
-    private const string PlayerBannedMessage = "Игрок забанен.";
-    private const string PlayerUnbannedMessage = "Игрок разбанен.";
-    private const string PlayerRemovedMessage = "Игрок удален.";
-
     static void Main(string[] args)
     {
         Database database = new Database();
-        int uniqueIdentifierCounter = 1;
         bool isApplicationRunning = true;
 
         while (isApplicationRunning)
         {
-            Console.Clear();
-            Console.WriteLine(MenuTitle);
-            Console.WriteLine($"{AddPlayerOption}\n{BanPlayerOption}\n{UnbanPlayerOption}\n{RemovePlayerOption}\n{ExitOption}");
+            DisplayMenu();
 
-            bool isParseSuccessful = int.TryParse(Console.ReadLine(), out int command);
-
-            if (isParseSuccessful == false)
+            if (!int.TryParse(Console.ReadLine(), out int command))
             {
-                Console.WriteLine(InvalidOptionMessage);
+                Console.WriteLine("Неверный выбор. Попробуйте снова.");
                 continue;
             }
 
             switch (command)
             {
-                case AddPlayerCommand:
-                    Player newPlayer = CreateNewPlayer(uniqueIdentifierCounter);
-
-                    if (newPlayer != null && database.AddPlayer(newPlayer))
-                    {
-                        Console.WriteLine(PlayerAddedMessage);
-                        uniqueIdentifierCounter++;
-                    }
-                    else
-                    {
-                        Console.WriteLine(InvalidInputMessage);
-                    }
+                case 1:
+                    HandleAddPlayer(database);
                     break;
 
-                case BanPlayerCommand:
-                    Console.WriteLine(PlayerListTitle);
-                    database.DisplayPlayers();
-
-                    if (database.BanPlayer(GetPlayerIdFromUser()))
-                    {
-                        Console.WriteLine(PlayerBannedMessage);
-                    }
-                    else
-                    {
-                        Console.WriteLine(InvalidInputMessage);
-                    }
+                case 2:
+                    HandleBanPlayer(database);
                     break;
 
-                case UnbanPlayerCommand:
-                    Console.WriteLine(PlayerListTitle);
-                    database.DisplayPlayers();
-
-                    if (database.UnbanPlayer(GetPlayerIdFromUser()))
-                    {
-                        Console.WriteLine(PlayerUnbannedMessage);
-                    }
-                    else
-                    {
-                        Console.WriteLine(InvalidInputMessage);
-                    }
+                case 3:
+                    HandleUnbanPlayer(database);
                     break;
 
-                case RemovePlayerCommand:
-                    Console.WriteLine(PlayerListTitle);
-                    database.DisplayPlayers();
-
-                    if (database.RemovePlayer(GetPlayerIdFromUser()))
-                    {
-                        Console.WriteLine(PlayerRemovedMessage);
-                    }
-                    else
-                    {
-                        Console.WriteLine(InvalidInputMessage);
-                    }
+                case 4:
+                    HandleRemovePlayer(database);
                     break;
 
-                case ExitCommand:
+                case 5:
                     isApplicationRunning = false;
                     break;
 
                 default:
-                    Console.WriteLine(InvalidOptionMessage);
+                    Console.WriteLine("Неверный выбор. Попробуйте снова.");
                     break;
             }
         }
     }
 
-    private static Player CreateNewPlayer(int uniqueIdentifier)
+    private static void DisplayMenu()
     {
-        Console.WriteLine(AddNewPlayerPrompt);
-        string nickname = Console.ReadLine();
+        string menuTitle = "Меню управления игроками:";
+        string addPlayerOption = "1. Добавить игрока";
+        string banPlayerOption = "2. Забанить игрока";
+        string unbanPlayerOption = "3. Разбанить игрока";
+        string removePlayerOption = "4. Удалить игрока";
+        string exitOption = "5. Выход";
 
-        bool isParseSuccessful = int.TryParse(Console.ReadLine(), out int level);
-
-        if (isParseSuccessful)
-        {
-            return new Player(uniqueIdentifier, nickname, level);
-        }
-
-        return null;
+        Console.Clear();
+        Console.WriteLine($"{menuTitle}\n{addPlayerOption}\n{banPlayerOption}\n{unbanPlayerOption}\n{removePlayerOption}\n{exitOption}");
     }
 
-    private static int GetPlayerIdFromUser()
+    private static void HandleAddPlayer(Database database)
     {
-        Console.WriteLine(PlayerIdPrompt);
-        bool isParseSuccessful = int.TryParse(Console.ReadLine(), out int uniqueIdentifier);
+        if (database.AddPlayer())
+        {
+            Console.WriteLine("Игрок успешно добавлен.");
+        }
+        else
+        {
+            Console.WriteLine("Некорректный ввод. Попробуйте снова.");
+        }
+    }
 
-        return isParseSuccessful ? uniqueIdentifier : -1;
+    private static void HandleBanPlayer(Database database)
+    {
+        HandlePlayerBanStatus(database, true);
+    }
+
+    private static void HandleUnbanPlayer(Database database)
+    {
+        HandlePlayerBanStatus(database, false);
+    }
+
+    private static void HandleRemovePlayer(Database database)
+    {
+        if (database.RemovePlayer())
+        {
+            Console.WriteLine("Игрок удален.");
+        }
+        else
+        {
+            Console.WriteLine("Некорректный ввод. Попробуйте снова.");
+        }
+    }
+
+    private static void HandlePlayerBanStatus(Database database, bool isBanning)
+    {
+        Console.WriteLine("Список игроков:");
+        database.DisplayPlayers();
+
+        if (isBanning ? database.BanPlayer() : database.UnbanPlayer())
+        {
+            Console.WriteLine(isBanning ? "Игрок забанен." : "Игрок разбанен.");
+        }
+        else
+        {
+            Console.WriteLine("Некорректный ввод. Попробуйте снова.");
+        }
     }
 }
 
 public class Player
 {
-    private int uniqueIdentifier;
-    private bool isBanned;
-    private string nickname;
-    private int level;
-
     public Player(int uniqueIdentifier, string nickname, int level)
     {
-        this.uniqueIdentifier = uniqueIdentifier;
-        this.nickname = nickname;
-        this.level = level;
-        this.isBanned = false;
+        UniqueIdentifier = uniqueIdentifier;
+        Nickname = nickname;
+        Level = level;
+        IsBanned = false;
     }
 
-    public int UniqueIdentifier => uniqueIdentifier;
-    public string Nickname => nickname;
-    public int Level => level;
-    public bool IsBanned => isBanned;
+    public int UniqueIdentifier { get; }
+    public string Nickname { get; }
+    public int Level { get; }
+    public bool IsBanned { get; private set; }
 
     public void Ban()
     {
-        isBanned = true;
+        IsBanned = true;
     }
 
     public void Unban()
     {
-        isBanned = false;
+        IsBanned = false;
     }
 }
 
 public class Database
 {
-    private List<Player> players;
+    private List<Player> players = new List<Player>();
+    private int uniqueIdentifierCounter = 1;
 
-    public Database()
+    public bool AddPlayer()
     {
-        players = new List<Player>();
-    }
+        Console.WriteLine("Введите ник и уровень игрока:");
+        string nickname = Console.ReadLine();
+        bool isParseSuccessful = int.TryParse(Console.ReadLine(), out int level);
 
-    public bool AddPlayer(Player player)
-    {
-        if (player != null)
+        if (isParseSuccessful)
         {
-            players.Add(player);
+            players.Add(new Player(uniqueIdentifierCounter++, nickname, level));
             return true;
         }
 
         return false;
     }
 
-    public bool RemovePlayer(int uniqueIdentifier)
+    public bool RemovePlayer()
     {
-        Player player = players.FirstOrDefault(p => p.UniqueIdentifier == uniqueIdentifier);
+        int uniqueIdentifier = GetPlayerIdFromUser();
+        Player playerToRemove = players.FirstOrDefault(player => player.UniqueIdentifier == uniqueIdentifier);
 
-        if (player != null)
+        if (playerToRemove != null)
         {
-            players.Remove(player);
+            players.Remove(playerToRemove);
             return true;
         }
 
         return false;
     }
 
-    public bool BanPlayer(int uniqueIdentifier)
+    public bool BanPlayer()
     {
-        Player player = players.FirstOrDefault(p => p.UniqueIdentifier == uniqueIdentifier);
-        if (player != null)
+        int uniqueIdentifier = GetPlayerIdFromUser();
+        Player playerToBan = players.FirstOrDefault(player => player.UniqueIdentifier == uniqueIdentifier);
+
+        if (playerToBan != null)
         {
-            player.Ban();
+            playerToBan.Ban();
             return true;
         }
 
         return false;
     }
 
-    public bool UnbanPlayer(int uniqueIdentifier)
+    public bool UnbanPlayer()
     {
-        Player player = players.FirstOrDefault(p => p.UniqueIdentifier == uniqueIdentifier);
-        if (player != null)
+        int uniqueIdentifier = GetPlayerIdFromUser();
+        Player playerToUnban = players.FirstOrDefault(player => player.UniqueIdentifier == uniqueIdentifier);
+
+        if (playerToUnban != null)
         {
-            player.Unban();
+            playerToUnban.Unban();
             return true;
         }
 
@@ -229,9 +201,16 @@ public class Database
 
     public void DisplayPlayers()
     {
-        foreach (var player in players)
+        foreach (Player player in players)
         {
             Console.WriteLine($"ID: {player.UniqueIdentifier}, Ник: {player.Nickname}, Уровень: {player.Level}, Забанен: {player.IsBanned}");
         }
+    }
+
+    private int GetPlayerIdFromUser()
+    {
+        Console.WriteLine("Введите уникальный ID игрока:");
+        int.TryParse(Console.ReadLine(), out int uniqueIdentifier);
+        return uniqueIdentifier;
     }
 }
