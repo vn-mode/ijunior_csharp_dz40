@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 
 class Program
 {
@@ -21,23 +20,23 @@ class Program
 
             switch (command)
             {
-                case 1:
-                    HandleAddPlayer(database);
+                case Database.AddPlayerCommand:
+                    database.HandleAddPlayer();
                     break;
 
-                case 2:
-                    HandleBanPlayer(database);
+                case Database.BanPlayerCommand:
+                    database.HandleBanPlayer();
                     break;
 
-                case 3:
-                    HandleUnbanPlayer(database);
+                case Database.UnbanPlayerCommand:
+                    database.HandleUnbanPlayer();
                     break;
 
-                case 4:
-                    HandleRemovePlayer(database);
+                case Database.RemovePlayerCommand:
+                    database.HandleRemovePlayer();
                     break;
 
-                case 5:
+                case Database.ExitCommand:
                     isApplicationRunning = false;
                     break;
 
@@ -50,64 +49,13 @@ class Program
 
     private static void DisplayMenu()
     {
-        string menuTitle = "Меню управления игроками:";
-        string addPlayerOption = "1. Добавить игрока";
-        string banPlayerOption = "2. Забанить игрока";
-        string unbanPlayerOption = "3. Разбанить игрока";
-        string removePlayerOption = "4. Удалить игрока";
-        string exitOption = "5. Выход";
-
         Console.Clear();
-        Console.WriteLine($"{menuTitle}\n{addPlayerOption}\n{banPlayerOption}\n{unbanPlayerOption}\n{removePlayerOption}\n{exitOption}");
-    }
-
-    private static void HandleAddPlayer(Database database)
-    {
-        if (database.AddPlayer())
-        {
-            Console.WriteLine("Игрок успешно добавлен.");
-        }
-        else
-        {
-            Console.WriteLine("Некорректный ввод. Попробуйте снова.");
-        }
-    }
-
-    private static void HandleBanPlayer(Database database)
-    {
-        HandlePlayerBanStatus(database, true);
-    }
-
-    private static void HandleUnbanPlayer(Database database)
-    {
-        HandlePlayerBanStatus(database, false);
-    }
-
-    private static void HandleRemovePlayer(Database database)
-    {
-        if (database.RemovePlayer())
-        {
-            Console.WriteLine("Игрок удален.");
-        }
-        else
-        {
-            Console.WriteLine("Некорректный ввод. Попробуйте снова.");
-        }
-    }
-
-    private static void HandlePlayerBanStatus(Database database, bool isBanning)
-    {
-        Console.WriteLine("Список игроков:");
-        database.DisplayPlayers();
-
-        if (isBanning ? database.BanPlayer() : database.UnbanPlayer())
-        {
-            Console.WriteLine(isBanning ? "Игрок забанен." : "Игрок разбанен.");
-        }
-        else
-        {
-            Console.WriteLine("Некорректный ввод. Попробуйте снова.");
-        }
+        Console.WriteLine($"Меню управления игроками:\n" +
+                          $"{Database.AddPlayerCommand}. Добавить игрока\n" +
+                          $"{Database.BanPlayerCommand}. Забанить игрока\n" +
+                          $"{Database.UnbanPlayerCommand}. Разбанить игрока\n" +
+                          $"{Database.RemovePlayerCommand}. Удалить игрока\n" +
+                          $"{Database.ExitCommand}. Выход");
     }
 }
 
@@ -139,10 +87,50 @@ public class Player
 
 public class Database
 {
-    private List<Player> players = new List<Player>();
-    private int uniqueIdentifierCounter = 1;
+    private List<Player> _players = new List<Player>();
+    private int _lastIdentifier = 1;
 
-    public bool AddPlayer()
+    public const int AddPlayerCommand = 1;
+    public const int BanPlayerCommand = 2;
+    public const int UnbanPlayerCommand = 3;
+    public const int RemovePlayerCommand = 4;
+    public const int ExitCommand = 5;
+
+    public void HandleAddPlayer()
+    {
+        if (AddPlayer())
+        {
+            Console.WriteLine("Игрок успешно добавлен.");
+        }
+        else
+        {
+            Console.WriteLine("Некорректный ввод. Попробуйте снова.");
+        }
+    }
+
+    public void HandleBanPlayer()
+    {
+        HandlePlayerBanStatus(true);
+    }
+
+    public void HandleUnbanPlayer()
+    {
+        HandlePlayerBanStatus(false);
+    }
+
+    public void HandleRemovePlayer()
+    {
+        if (RemovePlayer())
+        {
+            Console.WriteLine("Игрок удален.");
+        }
+        else
+        {
+            Console.WriteLine("Некорректный ввод. Попробуйте снова.");
+        }
+    }
+
+    private bool AddPlayer()
     {
         Console.WriteLine("Введите ник и уровень игрока:");
         string nickname = Console.ReadLine();
@@ -150,31 +138,29 @@ public class Database
 
         if (isParseSuccessful)
         {
-            players.Add(new Player(uniqueIdentifierCounter++, nickname, level));
+            _players.Add(new Player(_lastIdentifier++, nickname, level));
             return true;
         }
 
         return false;
     }
 
-    public bool RemovePlayer()
+    private bool RemovePlayer()
     {
-        int uniqueIdentifier = GetPlayerIdFromUser();
-        Player playerToRemove = players.FirstOrDefault(player => player.UniqueIdentifier == uniqueIdentifier);
+        Player playerToRemove = FindPlayerById();
 
         if (playerToRemove != null)
         {
-            players.Remove(playerToRemove);
+            _players.Remove(playerToRemove);
             return true;
         }
 
         return false;
     }
 
-    public bool BanPlayer()
+    private bool BanPlayer()
     {
-        int uniqueIdentifier = GetPlayerIdFromUser();
-        Player playerToBan = players.FirstOrDefault(player => player.UniqueIdentifier == uniqueIdentifier);
+        Player playerToBan = FindPlayerById();
 
         if (playerToBan != null)
         {
@@ -185,10 +171,9 @@ public class Database
         return false;
     }
 
-    public bool UnbanPlayer()
+    private bool UnbanPlayer()
     {
-        int uniqueIdentifier = GetPlayerIdFromUser();
-        Player playerToUnban = players.FirstOrDefault(player => player.UniqueIdentifier == uniqueIdentifier);
+        Player playerToUnban = FindPlayerById();
 
         if (playerToUnban != null)
         {
@@ -199,9 +184,39 @@ public class Database
         return false;
     }
 
+    private Player FindPlayerById()
+    {
+        int uniqueIdentifier = GetPlayerIdFromUser();
+
+        foreach (Player player in _players)
+        {
+            if (player.UniqueIdentifier == uniqueIdentifier)
+            {
+                return player;
+            }
+        }
+
+        return null;
+    }
+
+    private void HandlePlayerBanStatus(bool isBanning)
+    {
+        Console.WriteLine("Список игроков:");
+        DisplayPlayers();
+
+        if (isBanning ? BanPlayer() : UnbanPlayer())
+        {
+            Console.WriteLine(isBanning ? "Игрок забанен." : "Игрок разбанен.");
+        }
+        else
+        {
+            Console.WriteLine("Некорректный ввод. Попробуйте снова.");
+        }
+    }
+
     public void DisplayPlayers()
     {
-        foreach (Player player in players)
+        foreach (Player player in _players)
         {
             Console.WriteLine($"ID: {player.UniqueIdentifier}, Ник: {player.Nickname}, Уровень: {player.Level}, Забанен: {player.IsBanned}");
         }
